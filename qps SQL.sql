@@ -52,25 +52,27 @@ ToteBox_ID char(10) NOT null,
 WorkStation_IDX int default null,
 WorkStation_ID CHAR(10) DEFAULT NULL,
 Product_ID CHAR(10) DEFAULT NULL,
+Order_IDX INT DEFAULT NULL,
 Order_ID char(10) default null,
 Simulation_ID CHAR(10) DEFAULT NULL,
 primary key(ToteBox_IDX, ToteBox_ID),
-key `FK_ToteBox_Order_ID` (`Order_ID`),
+key `FK_ToteBox_Order_GROUP` (`Order_IDX`, `Order_ID`),
 KEY `FK_ToteBox_Simulation_ID` (`Simulation_ID`),
 KEY `FK_ToteBox_WorkStation_GROUP` (`WorkStation_IDX`, `WorkStation_ID`),
-constraint `FK_ToteBox_Order_ID` foreign key (`Order_ID`) references `Order` (`Order_ID`) ON delete set null on update cascade,
+constraint `FK_ToteBox_Order_GROUP` foreign key (`Order_IDX`,`Order_ID`) references `Order` (`Order_IDX`,`Order_ID`) ON delete set null on update cascade,
 constraint `FK_ToteBox_Simulation_ID` FOREIGN KEY (`Simulation_ID`) REFERENCES `Simulation` (`Simulation_ID`) ON DELETE SET NULL ON UPDATE CASCADE,
 CONSTRAINT `FK_ToteBox_WorkStation_GROUP` FOREIGN KEY (`WorkStation_IDX`, `WorkStation_ID`) REFERENCES `WorkStation` (`WorkStation_IDX`, `WorkStation_ID`) ON DELETE CASCADE ON UPDATE CASCADE
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 오더 생성
 CREATE TABLE if not exists `Order` (
+Order_IDX INT NOT NULL,
 Order_ID Char(30) NOT null,
 Simulation_ID CHAR(10) DEFAULT NULL,
 Product_ID char(10) default NULL,
 Product_cnt INT default NULL,
 Product_cat char(10) default null,
-primary key(Order_ID),
+primary key(Order_IDX, Order_ID),
 KEY `FK_Order_Product_ID` (`Product_ID`),
 KEY `FK_Order_Simulation_ID` (`Simulation_ID`),
 constraint `FK_Order_Product_ID` foreign key (`Product_ID`) references `Product` (`Product_ID`) ON DELETE CASCADE ON UPDATE cascade,
@@ -182,10 +184,10 @@ DELIMITER ;
 DELIMITER //
 CREATE PROCEDURE `CountToteBox`()
 BEGIN
-  SELECT Workstation.WorkStation_ID, COUNT(*) AS ToteBox_count
-  FROM Workstation
-  JOIN ToteBox ON Workstation.WorkStation_ID = ToteBox.Workstation_ID
-  GROUP BY Workstation.WorkStation_ID;
+  SELECT WorkStation.WorkStation_ID, COUNT(*) AS ToteBox_count
+  FROM WorkStation
+  JOIN ToteBox ON WorkStation.WorkStation_ID = ToteBox.WorkStation_ID
+  GROUP BY WorkStation.WorkStation_ID;
 END //
 DELIMITER ;
     
