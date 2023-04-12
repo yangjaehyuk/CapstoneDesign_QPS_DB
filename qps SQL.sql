@@ -17,13 +17,14 @@ primary key(Product_ID)
 -- 시뮬 생성
 CREATE TABLE if not exists `Simulation`(
 Simulation_ID char(10) NOT NULL,
+Order_IDX INT DEFAULT NULL,
 Order_ID char(10) default null,
 start_time time default null,
 end_time time default null,
 duration time default null,
 primary key(Simulation_ID),
-KEY `FK_Simulation_Order_ID` (`Order_ID`),
-constraint `FK_Simulation_Order_GROUP` foreign key (`Order_ID`) references `Order` (`Order_ID`) ON DELETE SET NULL ON UPDATE cascade
+KEY `FK_Simulation_Order_GROUP` (`Order_IDX`,`Order_ID`),
+constraint `FK_Simulation_Order_GROUP` foreign key (`Order_IDX`, `Order_ID`) references `Order` (`Order_IDX`, `Order_ID`) ON DELETE SET NULL ON UPDATE cascade
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 워크스테이션 생성
@@ -32,41 +33,45 @@ WorkStation_IDX int not null,
 WorkStation_ID char(10) NOT NULL,
 Product_ID char(10) default null,
 Simulation_ID char(10) default null,
+ToteBox_IDX INT DEFAULT NULL,
 ToteBox_ID char(10) default null,
 primary key(WorkStation_IDX, WorkStation_ID),
 KEY `FK_WorkStation_Product_ID` (`Product_ID`),
-KEY `FK_WorkStation_ToteBox_ID` (`ToteBox_ID`),
+KEY `FK_WorkStation_ToteBox_GROUP` (`ToteBox_IDX`, `ToteBox_ID`),
 KEY `FK_WorkStation_Simulation_ID` (`Simulation_ID`),
 CONSTRAINT `FK_WorkStation_Product_ID` FOREIGN KEY (`Product_ID`) REFERENCES `Product` (`Product_ID`) ON DELETE SET NULL ON UPDATE cascade,
-constraint `FK_WorkStation_ToteBox_ID` foreign key (`ToteBox_ID`) references `ToteBox` (`ToteBox_ID`) ON DELETE CASCADE ON UPDATE cascade,
+constraint `FK_WorkStation_ToteBox_GROUP` foreign key (`ToteBox_IDX`, `ToteBox_ID`) references `ToteBox` (`ToteBox_IDX`, `ToteBox_ID`) ON DELETE CASCADE ON UPDATE cascade,
 constraint `FK_WorkStation_Simulation_ID` foreign key (`Simulation_ID`) references `Simulation` (`Simulation_ID`) ON DELETE SET NULL ON UPDATE CASCADE
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 토트박스 생성
 CREATE TABLE if not exists `ToteBox` (
+ToteBox_IDX INT NOT NULL,
 ToteBox_ID char(10) NOT null,
 WorkStation_IDX int default null,
 WorkStation_ID CHAR(10) DEFAULT NULL,
 Product_ID CHAR(10) DEFAULT NULL,
+Order_IDX INT  DEFAULT NULL,
 Order_ID char(10) default null,
 Simulation_ID CHAR(10) DEFAULT NULL,
-primary key(ToteBox_ID),
-key `FK_ToteBox_Order_ID` (`Order_ID`),
+primary key(ToteBox_IDX, ToteBox_ID),
+key `FK_ToteBox_Order_GROUP` (`Order_IDX`, `Order_ID`),
 KEY `FK_ToteBox_Simulation_ID` (`Simulation_ID`),
 KEY `FK_ToteBox_WorkStation_GROUP` (`WorkStation_IDX`, `WorkStation_ID`),
-constraint `FK_ToteBox_Order_ID` foreign key (`Order_ID`) references `Order` (`Order_ID`) ON delete set null on update cascade,
+constraint `FK_ToteBox_Order_GROUP` foreign key (`Order_IDX`, `Order_ID`) references `Order` (`Order_IDX`, `Order_ID`) ON delete set null on update cascade,
 constraint `FK_ToteBox_Simulation_ID` FOREIGN KEY (`Simulation_ID`) REFERENCES `Simulation` (`Simulation_ID`) ON DELETE SET NULL ON UPDATE CASCADE,
 CONSTRAINT `FK_ToteBox_WorkStation_GROUP` FOREIGN KEY (`WorkStation_IDX`, `WorkStation_ID`) REFERENCES `WorkStation` (`WorkStation_IDX`, `WorkStation_ID`) ON DELETE CASCADE ON UPDATE CASCADE
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 오더 생성
 CREATE TABLE if not exists `Order` (
+Order_IDX INT NOT NULL,
 Order_ID Char(30) NOT null,
 Simulation_ID CHAR(10) DEFAULT NULL,
 Product_ID char(10) default NULL,
 Product_cnt INT default NULL,
 Product_cat char(10) default null,
-primary key(Order_ID),
+primary key(Order_IDX, Order_ID),
 KEY `FK_Order_Product_ID` (`Product_ID`),
 KEY `FK_Order_Simulation_ID` (`Simulation_ID`),
 constraint `FK_Order_Product_ID` foreign key (`Product_ID`) references `Product` (`Product_ID`) ON DELETE CASCADE ON UPDATE cascade,
@@ -76,14 +81,15 @@ CONSTRAINT `FK_Order_Simulation_ID` FOREIGN KEY (`Simulation_ID`) REFERENCES `Si
 -- 워크스테이션 내 토트 박스 테이블
 CREATE TABLE if not exists `ToteBoxInWorkStation` (
 LOG_ID Char(30) NOT null,
+ToteBox_IDX INT default NULL,
 ToteBox_ID char(10) default null,
 WorkStation_IDX int default null,
 WorkStation_ID CHAR(10) DEFAULT NULL,
 entry_time time default null,
 primary key(LOG_ID),
-KEY `FK_ToteBoxInWorkStation_ToteBox_ID` (`ToteBox_ID`),
+KEY `FK_ToteBoxInWorkStation_ToteBox_GROUP` (`ToteBox_IDX`, `ToteBox_ID`),
 KEY `FK_ToteBoxInWorkStation_WorkStation_GROUP` (`WorkStation_IDX`, `WorkStation_ID`),
-CONSTRAINT `FK_ToteBoxInWorkStation_ToteBox_ID` FOREIGN KEY (`ToteBox_ID`) REFERENCES `ToteBox` (`ToteBox_ID`) ON DELETE CASCADE ON UPDATE CASCADE,
+CONSTRAINT `FK_ToteBoxInWorkStation_ToteBox_GROUP` FOREIGN KEY (`ToteBox_IDX`, `ToteBox_ID`) REFERENCES `ToteBox` (`ToteBox_IDX`, `ToteBox_ID`) ON DELETE CASCADE ON UPDATE CASCADE,
 CONSTRAINT `FK_ToteBoxInWorkStation_WorkStation_GROUP` FOREIGN KEY (`WorkStation_IDX`, `WorkStation_ID`) REFERENCES `WorkStation` (`WorkStation_IDX`, `WorkStation_ID`) ON DELETE CASCADE ON UPDATE CASCADE
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 -- 프로시저
@@ -103,14 +109,16 @@ DELIMITER ;
 -- 토트박스 생성
 DELIMITER //
 CREATE PROCEDURE `createToteBox`(
+	IN `qps_ToteBox_IDX` INT,
     IN `qps_ToteBox_ID` VARCHAR(50),
     IN `qps_Product_ID` VARCHAR(50),
+    IN `qps_Order_IDX` INT,
     IN `qps_Order_ID` VARCHAR(50),
     IN `qps_Simulation_ID` VARCHAR(50)
 )
 BEGIN
-INSERT INTO ToteBox(ToteBox_ID, Product_ID, Order_ID, Simulation_ID) 
-VALUES(qps_ToteBox_ID, qps_Product_ID, qps_Order_ID, qps_Simulation_ID);
+INSERT INTO ToteBox(ToteBox_IDX, ToteBox_ID, Product_ID, Order_IDX, Order_ID, Simulation_ID) 
+VALUES(qps_ToteBox_IDX, qps_ToteBox_ID, qps_Product_ID, qps_Order_IDX, qps_Order_ID, qps_Simulation_ID);
 
 END//
 DELIMITER ;
@@ -118,6 +126,7 @@ DELIMITER ;
 -- 오더 생성
 DELIMITER //
 CREATE PROCEDURE `createOrder`(
+	IN `qps_Order_IDX` INT,
 	IN `qps_Order_ID` VARCHAR(50),
     IN `qps_Simulation_ID` VARCHAR(50),
     IN `qps_Product_ID` VARCHAR(50),
@@ -125,8 +134,8 @@ CREATE PROCEDURE `createOrder`(
     IN `qps_Product_cat` varchar(50)
 )
 BEGIN
-INSERT INTO `Order`(Order_ID, Simulation_ID, Product_ID, Product_cnt, Product_cat)
-VALUES(qps_Order_ID, qps_Simulation_ID, qps_Product_ID, qps_Product_cnt, qps_Product_cat);
+INSERT INTO `Order`(Order_IDX, Order_ID, Simulation_ID, Product_ID, Product_cnt, Product_cat)
+VALUES(qps_Order_IDX ,qps_Order_ID, qps_Simulation_ID, qps_Product_ID, qps_Product_cnt, qps_Product_cat);
 
 END//
 DELIMITER ;
@@ -135,11 +144,12 @@ DELIMITER ;
 DELIMITER //
 CREATE PROCEDURE `createSimul`(
 	IN `qps_Simulation_ID` VARCHAR(50),
+    IN `qps_Order_IDX` INT,
     IN `qps_Order_ID` VARCHAR(50)
 )
 BEGIN
-INSERT INTO Simulation(Simulation_ID, Order_ID, Simulation_status) 
-VALUES(qps_Simulation_ID, qps_Order_ID, 1);
+INSERT INTO Simulation(Simulation_ID, Order_IDX, Order_ID) 
+VALUES(qps_Simulation_ID, qps_Order_IDX, qps_Order_ID);
 END//
 DELIMITER ;
 
@@ -214,11 +224,12 @@ DELIMITER ;
 DELIMITER //
 CREATE PROCEDURE `deleteOrder`(
 	IN `qps_Simulation_ID` VARCHAR(50),
+    IN `qps_Order_IDX` INT,
     IN `qps_Order_ID` VARCHAR(50)
 )
 BEGIN
 DELETE FROM `Order`
-WHERE Simulation_ID = qps_Simulation_ID and Order_ID = qps_Order_ID;
+WHERE Simulation_ID = qps_Simulation_ID and Order_IDX = qps_Order_IDX and Order_ID = qps_Order_ID;
 END //
 DELIMITER ;
 
@@ -239,11 +250,12 @@ DELIMITER ;
 DELIMITER //
 CREATE PROCEDURE `deleteToteBox`(
 	IN `qps_Simulation_ID` VARCHAR(50),
+    IN `qps_ToteBox_IDX` INT,
     IN `qps_ToteBox_ID` VARCHAR(50)
 )
 BEGIN
 DELETE FROM ToteBox
-WHERE Simulation_ID = qps_Simulation_ID and ToteBox_ID = qps_ToteBox_ID;
+WHERE Simulation_ID = qps_Simulation_ID and ToteBox_ID = qps_ToteBox_IDX and ToteBox_IDX = qps_ToteBox_ID;
 END //
 DELIMITER ;
 
